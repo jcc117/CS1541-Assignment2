@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include <arpa/inet.h>
 #include "CPU.h"
+#include "cache.h"
 
 /*Helper method to get the hash index for branch table(s)*/
 int hash(unsigned int pc)
@@ -241,6 +242,28 @@ int main(int argc, char **argv)
     fprintf(stdout, "\n(predictor) to select a branch prediction method\n\n");
     exit(0);
   }
+
+  /*Open cache parameter file*/
+  cache_file = fopen("cache_config.txt", "r");
+  unsigned int I_size = 0; 
+  unsigned int I_assoc = 0;
+  unsigned int I_bsize = 0; 
+  unsigned int D_size = 0;
+  unsigned int D_assoc = 0;
+  unsigned int D_bsize = 0;
+  unsigned int miss_penalty = 0;
+  unsigned int latency = 0;
+
+  /*Read in parameters*/
+  fscanf(cache_file, "%d", &I_size);
+  fscanf(cache_file, "%d", &I_assoc);
+  fscanf(cache_file, "%d", &I_bsize);
+  fscanf(cache_file, "%d", &D_size);
+  fscanf(cache_file, "%d", &D_assoc);
+  fscanf(cache_file, "%d", &D_bsize);
+  fscanf(cache_file, "%d", &miss_penalty);
+  fscanf(cache_file, "%d", &latency);
+  fclose(cache_file);
     
   trace_file_name = argv[1];
   if (argc == 3) prediction_method = atoi(argv[2]) ;
