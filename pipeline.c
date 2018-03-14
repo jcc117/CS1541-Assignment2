@@ -246,23 +246,25 @@ int main(int argc, char **argv)
   /*Open cache parameter file*/
   cache_file = fopen("cache_config.txt", "r");
   unsigned int I_size = 0; 
-  unsigned int I_assoc = 0;
-  unsigned int I_bsize = 0; 
+  unsigned int I_assoc = 0; 
   unsigned int D_size = 0;
   unsigned int D_assoc = 0;
-  unsigned int D_bsize = 0;
-  unsigned int miss_penalty = 0;
-  unsigned int latency = 0;
+  unsigned int L2_size = 0;
+  unsigned int L2_assoc = 0;
+  unsigned int bsize = 0;
+  unsigned int L2_latency = 0;
+  unsigned int mem_time = 0;
 
   /*Read in parameters*/
   fscanf(cache_file, "%d", &I_size);
   fscanf(cache_file, "%d", &I_assoc);
-  fscanf(cache_file, "%d", &I_bsize);
   fscanf(cache_file, "%d", &D_size);
   fscanf(cache_file, "%d", &D_assoc);
-  fscanf(cache_file, "%d", &D_bsize);
-  fscanf(cache_file, "%d", &miss_penalty);
-  fscanf(cache_file, "%d", &latency);
+  fscanf(cache_file, "%d", &L2_size);
+  fscanf(cache_file, "%d", &L2_assoc);
+  fscanf(cache_file, "%d", &bsize);
+  fscanf(cache_file, "%d", &L2_latency)
+  fscanf(cache_file, "%d", &mem_time);
   fclose(cache_file);
     
   trace_file_name = argv[1];
