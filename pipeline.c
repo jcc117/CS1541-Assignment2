@@ -315,6 +315,10 @@ int main(int argc, char **argv)
   int i2_stall = 0; //Tripped if there is a L2 instruction stall
   int dc2_stall = 0; //Tripped if there is a L2 data stall
   int penalty = 0;  //How many cycles do I stall for
+  int l1_accesses = 0;
+  int l1_misses = 0;
+  int l2_accesses = 0;
+  int l2_misses = 0;
   /********************************************************************************************************************************************/
 
   //Preload an instruction into the buffer
@@ -337,6 +341,15 @@ int main(int argc, char **argv)
    
     if (!size && is_empty(if1_if2.type, if2_id.type, id_ex.type, ex_mem1.type, mem1_mem2.type, mem2_wb.type, exit_item.type, tr_entry->type)) {       /* no more instructions (trace_items) to simulate */
       printf("+ Simulation terminates at cycle : %u\n", cycle_number);
+      /***************************************************************************************************************************************/
+      //Caclulate the miss rates
+      double l1_miss_rate = (double)l1_misses/(double)l1_accesses;
+      double l2_miss_rate = (double)l2_misses/(double)l2_accesses;
+      printf("+ L1 accesses : %d\n", l1_accesses);
+      printf("+ L1 miss rate : %f\n", l1_miss_rate);
+      printf("+ L2 accesses : %d\n", l2_accesses);
+      printf("+ L2 miss rate : %f\n", l2_miss_rate);
+      /*********************************************************************************************************************************/
       break;
     }
     else{              /* parse the next instruction to simulate */
@@ -374,26 +387,26 @@ int main(int argc, char **argv)
       {
         int prediction = predict_branch(tr_entry->PC, tr_entry->Addr, prediction_method, table_size, 4, branch_table);
         //Predict taken, actually taken
-  			if(prediction == 1 && (abs(tr_entry->Addr - buffer->PC) > 4))
+  			if(prediction == 1 && (tr_entry->Addr == buffer->PC))
   			{
   				//call update_table to make branch prediction table match
   				update_branch(tr_entry->PC, tr_entry->Addr, prediction_method, 1, table_size, 4, branch_table);
   			}
           //Predict taken, actually not taken
-  			else if(prediction == 1 && !(abs(tr_entry->Addr - buffer->PC) > 4))
+  			else if(prediction == 1 && !(tr_entry->Addr == buffer->PC))
   			{
   				//call update_table to make branch prediction table match
   				update_branch(tr_entry->PC, tr_entry->Addr, prediction_method, 0, table_size, 4, branch_table);
           flush_p = 1;
   			}
           //Predict not taken, actually not taken
-  			else if(prediction == 0 && !(abs(tr_entry->Addr - buffer->PC) > 4))
+  			else if(prediction == 0 && !(tr_entry->Addr == buffer->PC))
   			{
   				//call update_table to make branch prediction table match
   				update_branch(tr_entry->PC, tr_entry->Addr, prediction_method, 0, table_size, 4, branch_table);
   			}
           //Predict not taken, actually taken
-  			else if(prediction == 0 && (abs(tr_entry->Addr - buffer->PC) > 4))
+  			else if(prediction == 0 && (tr_entry->Addr == buffer->PC))
   			{
   				//call update_table to make branch prediction table match
   				update_branch(tr_entry->PC, tr_entry->Addr, prediction_method, 1, table_size, 4, branch_table);
@@ -403,13 +416,28 @@ int main(int argc, char **argv)
       /****************************************************************************************************************************************/
       /*Check if needed data is in the cache*/
       /*Check for IF stage stall*/
+      /*If there is a L1 or L2 delay for the Instruction cache, set i_stall to 1*/
+      /*This can be checked 2 ways: check if there will be a miss in the cache and set a counter to reflect how many cycles to stall*/
+      /*If this counter is greater than 0, always set i_stall to 1 and decrement this counter by 1 on each cycle*/
 
       /*Check for the MEM1 stage stall*/
+      /*If there is a L1 or L2 delay for the Data cache, set dc_stall to 1*/
+      /*Very similar to above but needs a separate counter*/
+      /*If both this and the instruction cache miss the L1 cache at the same time you must run out there counters separately. Otherwise they can run
+      down at the same time. If this is the case, the Data cache shall go first into the L2 cache until it goes to 0. Then the Instruction cache will go.*/
 
+
+      /*INCREASE l1_accesses, l1_misses, l2_accesses, and l2_misses*/
       /*********************************************************************************************************************************************/
-
       //Process the instructions according to what types of hazards exist currently in the pipeline
-      if(d_stall && s_stall)  //Stall at ex_mem1, precedence for a data stall
+      if(dc_stall)  //Install bubble at mem1_mem2
+      {
+        real_exit = exit_item;
+        exit_item = mem2_wb;
+        mem2_wb = mem1_mem2;
+        mem1_mem2 = noop;
+      }
+      else if(d_stall && s_stall)  //Stall at ex_mem1, precedence for a data stall
       {
         real_exit = exit_item;
         exit_item = mem2_wb;
@@ -433,6 +461,16 @@ int main(int argc, char **argv)
         mem1_mem2 = ex_mem1;
         ex_mem1 = id_ex;
         id_ex = noop;
+      }
+      else if(i_stall)  //Insert bubble at if2_id
+      {
+        real_exit = exit_item;
+        exit_item = mem2_wb;
+        mem2_wb = mem1_mem2;
+        mem1_mem2 = ex_mem1;
+        ex_mem1 = id_ex;
+        id_ex = if2_id;
+        if2_id = noop;
       }
       else if(flush_p)  //Flush the instructions
       {
