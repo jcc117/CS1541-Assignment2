@@ -9,7 +9,7 @@
 #include <inttypes.h>
 #include <arpa/inet.h>
 #include "CPU.h"
-#include "cache.h"
+//#include "cache.h"
 
 /*Helper method to get the hash index for branch table(s)*/
 int hash(unsigned int pc)
@@ -203,9 +203,9 @@ int print_stage(struct trace_item *tr_entry, int cycle_number)
 
 //Check that there are still instructions in the pipe
 //Returns 1 if it is empty, 0 if not
-int is_empty(char if1_if2, char if2_id, char id_ex, char ex_mem1, char mem1_mem2, char mem2_wb, char exit_item)
+int is_empty(char if1_if2, char if2_id, char id_ex, char ex_mem1, char mem1_mem2, char mem2_wb, char exit_item, char tr)
 {
-  if(if1_if2 == ti_NOP && if2_id == ti_NOP && id_ex == ti_NOP && ex_mem1 == ti_NOP && mem1_mem2 == ti_NOP && mem2_wb == ti_NOP && exit_item == ti_NOP)
+  if(if1_if2 == ti_NOP && if2_id == ti_NOP && id_ex == ti_NOP && ex_mem1 == ti_NOP && mem1_mem2 == ti_NOP && mem2_wb == ti_NOP && exit_item == ti_NOP && tr == ti_NOP)
     return 1;
   return 0;
 }
@@ -244,7 +244,8 @@ int main(int argc, char **argv)
   }
 
   /*Open cache parameter file*/
-  cache_file = fopen("cache_config.txt", "r");
+  /*
+  FILE cache_file = fopen("cache_config.txt", "r");
   unsigned int I_size = 0; 
   unsigned int I_assoc = 0; 
   unsigned int D_size = 0;
@@ -253,10 +254,10 @@ int main(int argc, char **argv)
   unsigned int L2_assoc = 0;
   unsigned int bsize = 0;
   unsigned int L2_latency = 0;
-  unsigned int mem_time = 0;
+  unsigned int mem_time = 0;*/
 
   /*Read in parameters*/
-  fscanf(cache_file, "%d", &I_size);
+  /*fscanf(cache_file, "%d", &I_size);
   fscanf(cache_file, "%d", &I_assoc);
   fscanf(cache_file, "%d", &D_size);
   fscanf(cache_file, "%d", &D_assoc);
@@ -265,7 +266,7 @@ int main(int argc, char **argv)
   fscanf(cache_file, "%d", &bsize);
   fscanf(cache_file, "%d", &L2_latency)
   fscanf(cache_file, "%d", &mem_time);
-  fclose(cache_file);
+  fclose(cache_file);*/
     
   trace_file_name = argv[1];
   if (argc == 3) prediction_method = atoi(argv[2]) ;
@@ -294,7 +295,7 @@ int main(int argc, char **argv)
   noop.sReg_b = 255;
 
   //Create buffers for each stage
-  struct trace_item buffer[10000]; //Holds an extra instructions for a flush of an arbitrary size
+  struct trace_item *buffer; //Holds an extra instruction for a flushes
   struct trace_item if1_if2 = noop;
   struct trace_item if2_id = noop;
   struct trace_item id_ex = noop;
@@ -307,21 +308,34 @@ int main(int argc, char **argv)
   int d_stall = 0;  //Flag to trip if the pipeline is to be stalled for data hazard
   int s_stall = 0; //Flag to trip if the pipeline stalls at the structural hazard
   int flush_p = 0;
-  int counter = 0; //Keep track of buffer index
+  int counter = 0; //Keep track of number of squashed instructions to install
+  /******************************************************************************************************************************************/
+  int i_stall = 0;  //Tripped if there is a instruction cache stall
+  int dc_stall = 0; //Tripped if there is a data cache stall
+  int i2_stall = 0; //Tripped if there is a L2 instruction stall
+  int dc2_stall = 0; //Tripped if there is a L2 data stall
+  int penalty = 0;  //How many cycles do I stall for
+  /********************************************************************************************************************************************/
+
+  //Preload an instruction into the buffer
+  size = trace_get_item(&buffer);
+  tr_entry = buffer;
+  int fleg = 0;
 
   while(1) {
-    if(d_stall == 0 && s_stall == 0 && counter == 0)
+    if(d_stall == 0 && s_stall == 0 && counter == 0 && !fleg)
     {
-      size = trace_get_item(&tr_entry);
+      size = trace_get_item(&buffer);
     }
     d_stall = 0;
     s_stall = 0;
     flush_p = 0;
+    fleg = 0;
 
     if(!size && counter == 0) //While the pipeline still isn't empty, send it noops
-      tr_entry = &noop;
+      buffer = &noop;
    
-    if (!size && is_empty(if1_if2.type, if2_id.type, id_ex.type, ex_mem1.type, mem1_mem2.type, mem2_wb.type, exit_item.type)) {       /* no more instructions (trace_items) to simulate */
+    if (!size && is_empty(if1_if2.type, if2_id.type, id_ex.type, ex_mem1.type, mem1_mem2.type, mem2_wb.type, exit_item.type, tr_entry->type)) {       /* no more instructions (trace_items) to simulate */
       printf("+ Simulation terminates at cycle : %u\n", cycle_number);
       break;
     }
@@ -356,36 +370,43 @@ int main(int argc, char **argv)
         d_stall = 1;
       }
       //Check for a control hazard
-      if(id_ex.type == ti_BRANCH)
+      if(tr_entry->type == ti_BRANCH)
       {
-        int prediction = predict_branch(id_ex.PC, id_ex.Addr, prediction_method, table_size, 4, branch_table);
+        int prediction = predict_branch(tr_entry->PC, tr_entry->Addr, prediction_method, table_size, 4, branch_table);
         //Predict taken, actually taken
-  			if(prediction == 1 && (abs(id_ex.Addr - if2_id.PC) > 4))
+  			if(prediction == 1 && (abs(tr_entry->Addr - buffer->PC) > 4))
   			{
   				//call update_table to make branch prediction table match
-  				update_branch(id_ex.PC, id_ex.Addr, prediction_method, 1, table_size, 4, branch_table);
+  				update_branch(tr_entry->PC, tr_entry->Addr, prediction_method, 1, table_size, 4, branch_table);
   			}
           //Predict taken, actually not taken
-  			else if(prediction == 1 && !(abs(id_ex.Addr - if2_id.PC) > 4))
+  			else if(prediction == 1 && !(abs(tr_entry->Addr - buffer->PC) > 4))
   			{
   				//call update_table to make branch prediction table match
-  				update_branch(id_ex.PC, id_ex.Addr, prediction_method, 0, table_size, 4, branch_table);
+  				update_branch(tr_entry->PC, tr_entry->Addr, prediction_method, 0, table_size, 4, branch_table);
           flush_p = 1;
   			}
           //Predict not taken, actually not taken
-  			else if(prediction == 0 && !(abs(id_ex.Addr - if2_id.PC) > 4))
+  			else if(prediction == 0 && !(abs(tr_entry->Addr - buffer->PC) > 4))
   			{
   				//call update_table to make branch prediction table match
-  				update_branch(id_ex.PC, id_ex.Addr, prediction_method, 0, table_size, 4, branch_table);
+  				update_branch(tr_entry->PC, tr_entry->Addr, prediction_method, 0, table_size, 4, branch_table);
   			}
           //Predict not taken, actually taken
-  			else if(prediction == 0 && (abs(id_ex.Addr - if2_id.PC) > 4))
+  			else if(prediction == 0 && (abs(tr_entry->Addr - buffer->PC) > 4))
   			{
   				//call update_table to make branch prediction table match
-  				update_branch(id_ex.PC, id_ex.Addr, prediction_method, 1, table_size, 4, branch_table);
+  				update_branch(tr_entry->PC, tr_entry->Addr, prediction_method, 1, table_size, 4, branch_table);
           flush_p = 1;
   			}
       }
+      /****************************************************************************************************************************************/
+      /*Check if needed data is in the cache*/
+      /*Check for IF stage stall*/
+
+      /*Check for the MEM1 stage stall*/
+
+      /*********************************************************************************************************************************************/
 
       //Process the instructions according to what types of hazards exist currently in the pipeline
       if(d_stall && s_stall)  //Stall at ex_mem1, precedence for a data stall
@@ -404,7 +425,7 @@ int main(int argc, char **argv)
         mem1_mem2 = ex_mem1;
         ex_mem1 = noop;
       }
-      else if(s_stall && !flush_p)  //Insert bubble at id_ex, if you need to flush the instructions it can be ignored
+      else if(s_stall)  //Insert bubble at id_ex, if you need to flush the instructions it can be ignored
       {
         real_exit = exit_item;
         exit_item = mem2_wb;
@@ -416,14 +437,7 @@ int main(int argc, char **argv)
       else if(flush_p)  //Flush the instructions
       {
         //Install squashed instructions and store these ones in a buffer
-        buffer[counter] = if2_id;
-        buffer[counter + 1] = if1_if2;
-        buffer[counter + 2] = *tr_entry;
-        counter += 3;
-
-        if2_id = noop;
-        if1_if2 = noop;
-        tr_entry = &noop;
+        counter += 2;
 
         real_exit = exit_item;
         exit_item = mem2_wb;
@@ -433,6 +447,7 @@ int main(int argc, char **argv)
         id_ex = if2_id;
         if2_id = if1_if2;
         if1_if2 = *tr_entry;
+        tr_entry = &noop;
       }
       else  //No hazards, normal execution
       {
@@ -446,31 +461,26 @@ int main(int argc, char **argv)
           id_ex = if2_id;
           if2_id = if1_if2;
           if1_if2 = *tr_entry;
+          tr_entry = buffer;
+         // printf("Buff is:");
+          //print_stage(buffer, cycle_number);
         }
-        else  //Get instructions from the buffer
+        else  //Install a noop for squashed instructions
         {
           id_ex = if2_id;
           if2_id = if1_if2;
-          if1_if2 = buffer[0];
+          if1_if2 = *tr_entry;
+          tr_entry = &noop;
           counter -= 1;
-
-          //Shift everything in the buffer down by one
-          if(counter > 0)
-          {
-            //printf("here\n");
-            int i;
-            for(i = 0; i < counter; i++)
-            {
-              buffer[i] = buffer[i + 1];
-            }
-          }
+          if(counter == 0)
+            fleg = 1;
         }
       }
     }
 
     /*Don't worry about trace for now*/
     if (trace_view_on) {/* print the executed instruction if trace_view_on=1 */
-      printf("IF1 STAGE: ");
+      /*printf("IF1 STAGE: ");
       print_stage(&if1_if2, cycle_number);
       printf("IF2 STAGE: ");
       print_stage(&if2_id, cycle_number);
@@ -483,10 +493,10 @@ int main(int argc, char **argv)
       printf("MEM2 STAGE: ");
       print_stage(&mem2_wb, cycle_number);
       printf("WB STAGE: ");
-      print_stage(&exit_item, cycle_number);
+      print_stage(&exit_item, cycle_number);*/
       printf("EXITING: ");
       print_stage(&real_exit, cycle_number);
-      printf("==================================================\n\n");
+      //printf("==================================================\n\n");
     }
 
   }
