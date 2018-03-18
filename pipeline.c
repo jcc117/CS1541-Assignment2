@@ -9,7 +9,7 @@
 #include <inttypes.h>
 #include <arpa/inet.h>
 #include "CPU.h"
-//#include "cache.h"
+#include "cache.h"
 
 /*Helper method to get the hash index for branch table(s)*/
 int hash(unsigned int pc)
@@ -218,7 +218,6 @@ int main(int argc, char **argv)
   int trace_view_on = 0;
   int prediction_method = 0;
   
-  
   unsigned char t_type = 0;
   unsigned char t_sReg_a= 0;
   unsigned char t_sReg_b= 0;
@@ -235,6 +234,11 @@ int main(int argc, char **argv)
     Second 2 columns represent PC of branch instruction and address respectively
     If using a 1 bit predictor, use column 0 and disregard column 1*/
   unsigned int branch_table[table_size][4];
+  
+  /*Setting up the Cache*/
+  cache_t *theCache;
+  theCache = malloc(sizeof(cache_t));
+  theCache = cache_create(4, 8, 1, 200);
 
   if (argc == 1) {
     fprintf(stdout, "\nUSAGE: tv <trace_file> <predictor - integer value of 0, 1 or 2> <switch - any character>\n");
@@ -541,5 +545,6 @@ int main(int argc, char **argv)
 
   trace_uninit();
 
+  free(theCache);
   exit(0);
 }
