@@ -234,11 +234,6 @@ int main(int argc, char **argv)
     Second 2 columns represent PC of branch instruction and address respectively
     If using a 1 bit predictor, use column 0 and disregard column 1*/
   unsigned int branch_table[table_size][4];
-  
-  /*Setting up the Cache*/
-  cache_t *theCache;
-  theCache = malloc(sizeof(cache_t));
-  theCache = cache_create(4, 8, 1, 200);
 
   if (argc == 1) {
     fprintf(stdout, "\nUSAGE: tv <trace_file> <predictor - integer value of 0, 1 or 2> <switch - any character>\n");
@@ -545,6 +540,6 @@ int main(int argc, char **argv)
 
   trace_uninit();
 
-  free(theCache);
+  // free(theCache);
   exit(0);
 }
