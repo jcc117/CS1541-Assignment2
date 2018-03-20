@@ -211,17 +211,31 @@ int is_empty(char if1_if2, char if2_id, char id_ex, char ex_mem1, char mem1_mem2
 }
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-int check_for_data(unsigned long Addr, struct cahce_t L1_Data)
+int check_for_data(unsigned long Addr, struct cahce_t L1_Data, unsigned char type)
 {
 	int result = 0;
-	result = cache_access(Addr, L1_Data, 1);
+	if(type == ti_LOAD)
+	{
+		result = cache_access(Addr, L1_Data, 1, 0);
+	}
+	else
+	{
+		result = cache_access(Addr, L1_Date, 0, 0)
+	}
 	return result;
 }
 
-int check_for_instruction(unsigned long Addr, struct L1_Instruction)
+int check_for_instruction(unsigned long Addr, struct L1_Instruction, unsigned char type)
 {
 	int result = 0;
-	result = cache_access(Addr, L1_Instruction, 1);
+	if(type == ti_LOAD)
+	{
+		result = cache_access(Addr, L1_Instruction, 1, 1);
+	}
+	else
+	{
+		result = cache_access(Addr, L1_Instruction, 0, 1)
+	}
 	return result;
 }
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
@@ -462,7 +476,7 @@ int main(int argc, char **argv)
 		  }
 		  /****************************************************************************************************************************************/
 		  /*Check if needed data is in the cache*/
-		  data_flag = check_for_data(ex_mem1.Addr, L1_Data);
+		  data_flag = check_for_data(ex_mem1.Addr, L1_Data, ex_mem1.type);
 		  if(data_flag!=0)
 		  {
 			  l2_accesses++;
@@ -474,7 +488,7 @@ int main(int argc, char **argv)
 		  }
 		  l1_D_accesses++;
 		  /*Check for IF stage stall*/
-		  instruction_flag = check_for_instruction(t_Addr, L1_Instruction);
+		  instruction_flag = check_for_instruction(t_Addr, L1_Instruction, t_type);
 		  if(instruction_flag!=0)
 		  {
 			  l1_I_misses++;
