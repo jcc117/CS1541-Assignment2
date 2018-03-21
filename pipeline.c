@@ -516,12 +516,12 @@ int main(int argc, char **argv)
 			  data_flag = check_for_data(ex_mem1.Addr, the_Cache, ex_mem1.type);
 			  if(data_flag!=0)
 			  {
-				  printf("L1_Data missed! Accessing L2...\n");
+				  printf("L1_Data missed! Accessing L2...\n"); //this happens within check_for_data, but this is just simulating it for debugging
 				  l2_accesses++;
 				  l1_D_misses++;
 				  if((data_flag-L2_latency)!=0)
 				  {
-					  printf("L2 missed! Accessing memory... :( \n");
+					  printf("L2 missed! Accessing memory... :( \n"); //this happens within check_for_data, but this is just simulating it for debugging
 					  l2_misses++;
 				  }
 			  }
@@ -534,12 +534,12 @@ int main(int argc, char **argv)
 			  instruction_flag = check_for_instruction(t_PC, the_Cache, t_type);
 			  if(instruction_flag!=0)
 			  {
-				  printf("L1_Instruction missed! Accessing L2...\n");
+				  printf("L1_Instruction missed! Accessing L2...\n"); //this happens within check_for_data, but this is just simulating it for debugging
 				  l1_I_misses++;
 				  l2_accesses++;
 				  if((instruction_flag-L2_latency)!=0)
 				  {
-					  printf("L2 missed! Accessing memory... :( \n");
+					  printf("L2 missed! Accessing memory... :( \n"); //this happens within check_for_data, but this is just simulating it for debugging
 					  l2_misses++;
 				  }
 			  }
