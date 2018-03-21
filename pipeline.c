@@ -342,7 +342,7 @@ int main(int argc, char **argv)
  
   /*Cache Creation***************************************************************************************/
   
-  struct cache_t *the_Cache = cache_create(I_size, D_size, L2_size, bsize, I_assoc, D_assoc, L2_assoc, L1_latency, L2_latency); //we need to update cache_create to fit these inputs, only 1 cache, will flag for D or I
+  struct cache_t *the_Cache = cache_create(I_size, D_size, L2_size, bsize, I_assoc, D_assoc, L2_assoc, L1_latency, L2_latency, mem_time); //we need to update cache_create to fit these inputs, only 1 cache, will flag for D or I
   
   /******************************************************************************************************/
     
