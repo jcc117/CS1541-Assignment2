@@ -213,13 +213,16 @@ int is_empty(char if1_if2, char if2_id, char id_ex, char ex_mem1, char mem1_mem2
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 int check_for_data(unsigned long Addr, struct cahce_t L1_Data, unsigned char type)
 {
+	printf("checking Data Cache!\n");
 	int result = 0;
 	if(type == ti_LOAD)
 	{
+		printf("type: LOAD\n");
 		result = cache_access(Addr, L1_Data, 1, 0);
 	}
 	else
 	{
+		printf("type: STORE\n");
 		result = cache_access(Addr, L1_Date, 0, 0)
 	}
 	return result;
@@ -227,13 +230,16 @@ int check_for_data(unsigned long Addr, struct cahce_t L1_Data, unsigned char typ
 
 int check_for_instruction(unsigned long Addr, struct L1_Instruction, unsigned char type)
 {
+	printf("checking Instruction Cache!\n");
 	int result = 0;
 	if(type == ti_LOAD)
 	{
+		printf("type: LOAD\n");
 		result = cache_access(Addr, L1_Instruction, 1, 1);
 	}
 	else
 	{
+		printf("type: STORE\n");
 		result = cache_access(Addr, L1_Instruction, 0, 1)
 	}
 	return result;
@@ -304,7 +310,6 @@ int main(int argc, char **argv)
   
   struct cache_t *L1_Instruction = cache_create(I_size, bsize, I_assoc, int L1_latency);
   struct cache_t *L1_Data = cache_create(D_size, bsize, D_assoc, int L1_latency);
-  //struct cache_t *L2 = cache_create(L2_size, bsize, L2_assco, int L2_latency);
   
   /******************************************************************************************************/
     
@@ -350,15 +355,11 @@ int main(int argc, char **argv)
   int flush_p = 0;
   int counter = 0; //Keep track of number of squashed instructions to install
   /******************************************************************************************************************************************/
-  // int i_stall = 0;  //Tripped if there is a instruction cache stall
-  // int dc_stall = 0; //Tripped if there is a data cache stall
-  // int i2_stall = 0; //Tripped if there is a L2 instruction stall
-  // int dc2_stall = 0; //Tripped if there is a L2 data stall
   
-  int cache_counter = 0; //if 0, proceed, if not freeze
+  int cache_counter = 0; //if 0, proceed, if not freeze, this is the penalty
   int instruction_flag = 0;
   int data_flag = 0;
-  int penalty = 0;  //How many cycles do I stall for
+  // int penalty = 0;  //How many cycles do I stall for
   int l1_D_accesses = 0;
   int l1_D_misses = 0;
   int l1_I_accesses = 0;
@@ -395,22 +396,22 @@ int main(int argc, char **argv)
 		  // printf("+ Simulation terminates at cycle : %u\n", cycle_number);
 		  printf("%u instruction that exited the pipeline in this cycle\n"); 			//<----- fixed based off notes section
 		  /***************************************************************************************************************************************/
+		  
 		  //Caclulate the miss rates
 		  double l1_D_miss_rate = (double)l1_D_misses/(double)l1_D_accesses;
 		  double l1_I_miss_rate = (double)l1_I_misses/(double)l1_I_accesses;
 		  double l2_miss_rate = (double)l2_misses/(double)l2_accesses;
+		  
 		  //calculate hits
 		  int l1_D_hits = l1_D_accesses - l1_D_misses;
 		  int l1_I_hits = l1_I_accesses - l1_I_misses;
 		  int l2_hits = l2_accesses - l2_misses;
-		  // printf("+ L1 accesses : %d\n", l1_accesses);
-		  // printf("+ L1 miss rate : %f\n", l1_miss_rate);
-		  // printf("+ L2 accesses : %d\n", l2_accesses);
-		  // printf("+ L2 miss rate : %f\n", l2_miss_rate);
+		  
 		  printf("L1 Data Cache: \t %d accesses, %d hits, %d misses, %f miss rate ", l1_D_accesses, l1_D_hits, l1_D_misses, l1_D_miss_rate);
 		  printf("L1 Instruction Cache: \t %d accesses, %d hits, %d misses, %f miss rate ", l1_I_accesses, l1_I_hits, l1_I_misses, l1_I_miss_rate);
 		  printf("L2 Cache: \t %d accesses, %d hits, %d misses, %f miss rate ", l2_accesses, l2_hits, l2_misses, l2_miss_rate);
-		  /*********************************************************************************************************************************/
+		 
+		 /*********************************************************************************************************************************/
 		  break;
 		}
 		else{              /* parse the next instruction to simulate */
@@ -475,20 +476,24 @@ int main(int argc, char **argv)
 				}
 		  }
 		  /****************************************************************************************************************************************/
+		  
 		  /*Check if needed data is in the cache*/
 		  if(ex_mem1.type==ti_LOAD||ex_mem1.type==ti_STORE)
 		  {
 			  data_flag = check_for_data(ex_mem1.Addr, L1_Data, ex_mem1.type);
 			  if(data_flag!=0)
 			  {
+				  printf("L1_Data missed! Accessing L2...\n");
 				  l2_accesses++;
 				  l1_D_misses++;
 				  if((data_flag-L2_latency)!=0)
 				  {
+					  printf("L2 missed! Accessing memory... :( \n");
 					  l2_misses++;
 				  }
 			  }
 			  l1_D_accesses++;
+			  printf("Added &d cycles while accessing data caches!\n", data_flag);
 		  }
 		  /*Check for IF stage stall*/
 		  if(t_type==ti_LOAD||t_type==ti_STORE)
@@ -496,32 +501,27 @@ int main(int argc, char **argv)
 			  instruction_flag = check_for_instruction(t_Addr, L1_Instruction, t_type);
 			  if(instruction_flag!=0)
 			  {
+				  printf("L1_Instruction missed! Accessing L2...\n");
 				  l1_I_misses++;
 				  l2_accesses++;
 				  if((instruction_flag-L2_latency)!=0)
 				  {
+					  printf("L2 missed! Accessing memory... :( \n");
 					  l2_misses++;
 				  }
 			  }
 			  l1_I_accesses++;
+			  printf("Added &d cycles while accessing instruction caches!\n", instruction_flag);
 		  }
-		  /*If there is a L1 or L2 delay for the Instruction cache, set i_stall to 1*/
-		  /*This can be checked 2 ways: check if there will be a miss in the cache and set a counter to reflect how many cycles to stall*/
-		  /*If this counter is greater than 0, always set i_stall to 1 and decrement this counter by 1 on each cycle*/
-
-		  /*Check for the MEM1 stage stall*/
-		  /*If there is a L1 or L2 delay for the Data cache, set dc_stall to 1*/
-		  /*Very similar to above but needs a separate counter*/
-		  /*If both this and the instruction cache miss the L1 cache at the same time you must run out there counters separately. Otherwise they can run
-		  down at the same time. If this is the case, the Data cache shall go first into the L2 cache until it goes to 0. Then the Instruction cache will go.*/
 		  cache_counter = data_flag + instruction_flag;
+		  printf("cache_counter is now &d\n", cache_counter);
 		  if(cache_counter!=0)
 		  {
 			  cycle_number+=cache_counter; //fakes the wait on a miss
 			  cache_flag = 1;
+			  printf("cache is flagged for freeze!\n");
 		  }
-			
-		  /*INCREASE l1_accesses, l1_misses, l2_accesses, and l2_misses*/
+		  
 		  /*********************************************************************************************************************************************/
 		  //Process the instructions according to what types of hazards exist currently in the pipeline
 		  // if(dc_stall)  //Install bubble at mem1_mem2
@@ -632,13 +632,20 @@ int main(int argc, char **argv)
 		}
 
 	  }
-  }
-  else
-  {
+	  
+	//-------------------------------------------------------------------------------------------------//
+	else
+	{
 	  cache_counter--; //freezes pipeline for cache misses, idk if this needs anything else
 	  if(cache_counter==0)
+	  {
 		  cache_flag = 0;
+		  printf("Unfreezing pipeline...\n");
+	  }
+	}
+	//-------------------------------------------------------------------------------------------------//
   }
+  
 
   trace_uninit();
 
