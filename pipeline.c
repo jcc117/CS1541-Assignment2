@@ -228,6 +228,9 @@ int main(int argc, char **argv)
   unsigned int cycle_number = 0;
 
   int table_size = 64;
+  
+  cache_t *theCache = malloc(sizeof(cache_t));
+  theCache = cache_create(4, 8, 32, 1, 6, 10);
 
   /*Branch prediction table
     First 2 columns represent the 2 bits to predict from
@@ -540,6 +543,6 @@ int main(int argc, char **argv)
 
   trace_uninit();
 
-  // free(theCache);
+  free(theCache);
   exit(0);
 }
