@@ -476,29 +476,35 @@ int main(int argc, char **argv)
 		  }
 		  /****************************************************************************************************************************************/
 		  /*Check if needed data is in the cache*/
-		  data_flag = check_for_data(ex_mem1.Addr, L1_Data, ex_mem1.type);
-		  if(data_flag!=0)
+		  if(ex_mem1.type==ti_LOAD||ex_mem1.type==ti_STORE)
 		  {
-			  l2_accesses++;
-			  l1_D_misses++;
-			  if((data_flag-L2_latency)!=0)
+			  data_flag = check_for_data(ex_mem1.Addr, L1_Data, ex_mem1.type);
+			  if(data_flag!=0)
 			  {
-				  l2_misses++;
+				  l2_accesses++;
+				  l1_D_misses++;
+				  if((data_flag-L2_latency)!=0)
+				  {
+					  l2_misses++;
+				  }
 			  }
+			  l1_D_accesses++;
 		  }
-		  l1_D_accesses++;
 		  /*Check for IF stage stall*/
-		  instruction_flag = check_for_instruction(t_Addr, L1_Instruction, t_type);
-		  if(instruction_flag!=0)
+		  if(t_type==ti_LOAD||t_type==ti_STORE)
 		  {
-			  l1_I_misses++;
-			  l2_accesses++;
-			  if((instruction_flag-L2_latency)!=0)
+			  instruction_flag = check_for_instruction(t_Addr, L1_Instruction, t_type);
+			  if(instruction_flag!=0)
 			  {
-				  l2_misses++;
+				  l1_I_misses++;
+				  l2_accesses++;
+				  if((instruction_flag-L2_latency)!=0)
+				  {
+					  l2_misses++;
+				  }
 			  }
+			  l1_I_accesses++;
 		  }
-		  l1_I_accesses++;
 		  /*If there is a L1 or L2 delay for the Instruction cache, set i_stall to 1*/
 		  /*This can be checked 2 ways: check if there will be a miss in the cache and set a counter to reflect how many cycles to stall*/
 		  /*If this counter is greater than 0, always set i_stall to 1 and decrement this counter by 1 on each cycle*/
