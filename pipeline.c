@@ -223,7 +223,7 @@ int check_for_data(unsigned long Addr, cache_t L1_Data, unsigned char type) //L1
 	else
 	{
 		printf("type: STORE\n");
-		result = cache_access(Addr, L1_Date, 1, 0) //0 means data
+		result = cache_access(Addr, L1_Date, 1, 1) //0 means data
 	}
 	return result;
 }
@@ -235,7 +235,7 @@ int check_for_instruction(unsigned long PC, cache_t L1_Instruction, unsigned cha
 	if(type == ti_LOAD)
 	{
 		printf("type: LOAD\n");
-		result = cache_access(PC, L1_Instruction, 0, 1); //1 means instruction
+		result = cache_access(PC, L1_Instruction, 0, 0); //1 means instruction
 	}
 	else if(type == ti_STORE)
 	{
@@ -245,37 +245,37 @@ int check_for_instruction(unsigned long PC, cache_t L1_Instruction, unsigned cha
 	else if(type == ti_BRANCH) //addr == pc
 	{
 		printf("type: BRANCH\n");
-		result = cache_access(PC, L1_Instruction, 0, 1); //1 means instruction
+		result = cache_access(PC, L1_Instruction, 0, 0); //1 means instruction
 	}
 	else if(type == ti_ITYPE) //addr == pc
 	{
 		printf("type: ITYPE\n");
-		result = cache_access(PC, L1_Instruction, 0, 1); //1 means instruction
+		result = cache_access(PC, L1_Instruction, 0, 0); //1 means instruction
 	}
 	else if(type == ti_JRTYPE)
 	{
 		printf("type: JRTYPE\n");
-		result = cache_access(PC, L1_Instruction, 0, 1); //1 means instruction
+		result = cache_access(PC, L1_Instruction, 0, 0); //1 means instruction
 	}
 	else if(type == ti_JTYPE)
 	{
 		printf("type: JTYPE\n");
-		result = cache_access(PC, L1_Instruction, 0, 1); //1 means instruction
+		result = cache_access(PC, L1_Instruction, 0, 0); //1 means instruction
 	}
 	else if(type == ti_RTYPE)
 	{
 		printf("type: RTYPE\n");
-		result = cache_access(PC, L1_Instruction, 0, 1); //1 means instruction
+		result = cache_access(PC, L1_Instruction, 0, 0); //1 means instruction
 	}
 	else if(type == ti_SPECIAL)
 	{
 		printf("type: SPECIAL\n");
-		result = cache_access(PC, L1_Instruction, 0, 1); //1 means instruction
+		result = cache_access(PC, L1_Instruction, 0, 0); //1 means instruction
 	}
 	else if(type == ti_NOP)
 	{
 		printf("type: NOOP... wait what? How'd did you get here?\n");
-		result = cache_access(PC, L1_Instruction, 0, 1); //1 means instruction
+		result = cache_access(PC, L1_Instruction, 0, 0); //1 means instruction
 	}
 	return result;
 }
