@@ -230,7 +230,11 @@ int main(int argc, char **argv)
   int table_size = 64;
   
   cache_t *theCache = malloc(sizeof(cache_t));
-  theCache = cache_create(4, 8, 32, 1, 6, 10);
+  // struct cache_t * cache_create(	int I_size, int I_assoc,
+//   								int D_size, int D_assoc,
+//   								int L2_size, int L2_assoc,
+//   								int L1_lat, int L2_lat, int mem_lat, int blocksize)
+  theCache = cache_create(4, 1, 4, 1, 8, 1, 0, 10, 100, 32);
 
   /*Branch prediction table
     First 2 columns represent the 2 bits to predict from
