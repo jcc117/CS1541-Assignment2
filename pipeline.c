@@ -211,71 +211,71 @@ int is_empty(char if1_if2, char if2_id, char id_ex, char ex_mem1, char mem1_mem2
 }
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-int check_for_data(unsigned long Addr, char* otherr_access, struct cache_t *L1_Data, unsigned char type) //L1_Data is technically the_Cache, but no sweat
+int check_for_data(unsigned long Addr, char* other_access, struct cache_t *L1_Data, unsigned char type) //L1_Data is technically the_Cache, but no sweat
 {
 	printf("checking Data Cache!\n");
 	int result = 0;
 	if(type == ti_LOAD)
 	{
 		printf("type: LOAD\n");
-		result = cache_access(Addr, L1_Data, other_cache_access, 1, 0); //0 means data
+		result = cache_access(L1_Data, other_access, Addr, 1, 0); //0 means data
 	}
 	else
 	{
 		printf("type: STORE\n");
-		result = cache_access(Addr, L1_Data, other_cache_access, 1, 1); //0 means data
+		result = cache_access(L1_Data, other_access, Addr, 1, 1); //0 means data
 	}
 	return result;
 }
 
-int check_for_instruction(unsigned long PC, char* otherr_access, struct cache_t *L1_Instruction, unsigned char type) //L1_Instruction is technically the_Cache, but no sweat
+int check_for_instruction(unsigned long PC, char* other_access, struct cache_t *L1_Instruction, unsigned char type) //L1_Instruction is technically the_Cache, but no sweat
 {
 	printf("checking Instruction Cache!\n");
 	int result = 0;
 	if(type == ti_LOAD)
 	{
 		printf("type: LOAD\n");
-		result = cache_access(PC, L1_Instruction, 0, 0); //1 means instruction
+		result = cache_access(L1_Instruction, other_access, PC, 0, 0); //1 means instruction
 	}
 	else if(type == ti_STORE)
 	{
 		printf("type: STORE\n");
-		result = cache_access(PC, L1_Instruction, 0, 1); //1 means instruction
+		result = cache_access(L1_Instruction, other_access, PC, 0, 1); //1 means instruction
 	}
 	else if(type == ti_BRANCH) //addr == pc
 	{
 		printf("type: BRANCH\n");
-		result = cache_access(PC, L1_Instruction, 0, 0); //1 means instruction
+		result = cache_access(L1_Instruction, other_access, PC, 0, 0); //1 means instruction
 	}
 	else if(type == ti_ITYPE) //addr == pc
 	{
 		printf("type: ITYPE\n");
-		result = cache_access(PC, L1_Instruction, 0, 0); //1 means instruction
+		result = cache_access(L1_Instruction, other_access, PC, 0, 0); //1 means instruction
 	}
 	else if(type == ti_JRTYPE)
 	{
 		printf("type: JRTYPE\n");
-		result = cache_access(PC, L1_Instruction, 0, 0); //1 means instruction
+		result = cache_access(L1_Instruction, other_access, PC, 0, 0); //1 means instruction
 	}
 	else if(type == ti_JTYPE)
 	{
 		printf("type: JTYPE\n");
-		result = cache_access(PC, L1_Instruction, 0, 0); //1 means instruction
+		result = cache_access(L1_Instruction, other_access, PC, 0, 0); //1 means instruction
 	}
 	else if(type == ti_RTYPE)
 	{
 		printf("type: RTYPE\n");
-		result = cache_access(PC, L1_Instruction, 0, 0); //1 means instruction
+		result = cache_access(L1_Instruction, other_access, PC, 0, 0); //1 means instruction
 	}
 	else if(type == ti_SPECIAL)
 	{
 		printf("type: SPECIAL\n");
-		result = cache_access(PC, L1_Instruction, 0, 0); //1 means instruction
+		result = cache_access(L1_Instruction, other_access, PC, 0, 0); //1 means instruction
 	}
 	else if(type == ti_NOP)
 	{
 		printf("type: NOOP... wait what? How'd did you get here?\n");
-		result = cache_access(PC, L1_Instruction, 0, 0); //1 means instruction
+		result = cache_access(L1_Instruction, other_access, PC, 0, 0); //1 means instruction
 	}
 	return result;
 }
@@ -315,7 +315,7 @@ int main(int argc, char **argv)
   }
 
   /*Open cache parameter file*/
-  FILE cache_file = fopen("cache_config.txt", "r");
+  FILE *cache_file = fopen("cache_config.txt", "r");
   unsigned int I_size = 0; 
   unsigned int I_assoc = 0; 
   unsigned int D_size = 0;
@@ -532,7 +532,7 @@ int main(int argc, char **argv)
 			  printf("Added &d cycles while accessing data caches!\n", data_flag);
 		  }
 		  /*Check for IF stage stall*/
-		  if(t_type!=noop)
+		  if(t_type!=ti_NOP)
 		  {
 			  instruction_flag = check_for_instruction(t_PC, other_cache_access, the_Cache, t_type);
 			  if(instruction_flag!=0)
@@ -688,5 +688,6 @@ int main(int argc, char **argv)
 
   trace_uninit();
 
+  free(the_Cache);
   exit(0);
 }
