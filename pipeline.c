@@ -211,24 +211,24 @@ int is_empty(char if1_if2, char if2_id, char id_ex, char ex_mem1, char mem1_mem2
 }
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-int check_for_data(unsigned long Addr, cache_t L1_Data, unsigned char type) //L1_Data is technically the_Cache, but no sweat
+int check_for_data(unsigned long Addr, char* otherr_access, struct cache_t *L1_Data, unsigned char type) //L1_Data is technically the_Cache, but no sweat
 {
 	printf("checking Data Cache!\n");
 	int result = 0;
 	if(type == ti_LOAD)
 	{
 		printf("type: LOAD\n");
-		result = cache_access(Addr, L1_Data, 1, 0); //0 means data
+		result = cache_access(Addr, L1_Data, other_cache_access, 1, 0); //0 means data
 	}
 	else
 	{
 		printf("type: STORE\n");
-		result = cache_access(Addr, L1_Date, 1, 1) //0 means data
+		result = cache_access(Addr, L1_Data, other_cache_access, 1, 1); //0 means data
 	}
 	return result;
 }
 
-int check_for_instruction(unsigned long PC, cache_t L1_Instruction, unsigned char type) //L1_Instruction is technically the_Cache, but no sweat
+int check_for_instruction(unsigned long PC, char* otherr_access, struct cache_t *L1_Instruction, unsigned char type) //L1_Instruction is technically the_Cache, but no sweat
 {
 	printf("checking Instruction Cache!\n");
 	int result = 0;
@@ -336,7 +336,7 @@ int main(int argc, char **argv)
   fscanf(cache_file, "%d", &L2_size);
   fscanf(cache_file, "%d", &L2_assoc);
   fscanf(cache_file, "%d", &bsize);
-  fscanf(cache_file, "%d", &L2_latency)
+  fscanf(cache_file, "%d", &L2_latency);
   fscanf(cache_file, "%d", &mem_time);
   fclose(cache_file);
  
@@ -400,6 +400,9 @@ int main(int argc, char **argv)
   int l2_accesses = 0;
   int l2_misses = 0;
   
+  
+  char *other_cache_access = 0;
+	
   int cache_flag = 0;
   
   
@@ -513,7 +516,7 @@ int main(int argc, char **argv)
 		  /*Check if needed data is in the cache*/
 		  if(ex_mem1.type==ti_LOAD||ex_mem1.type==ti_STORE)
 		  {
-			  data_flag = check_for_data(ex_mem1.Addr, the_Cache, ex_mem1.type);
+			  data_flag = check_for_data(ex_mem1.Addr, other_cache_access, the_Cache, ex_mem1.type);
 			  if(data_flag!=0)
 			  {
 				  printf("L1_Data missed! Accessing L2...\n"); //this happens within check_for_data, but this is just simulating it for debugging
@@ -531,7 +534,7 @@ int main(int argc, char **argv)
 		  /*Check for IF stage stall*/
 		  if(t_type!=noop)
 		  {
-			  instruction_flag = check_for_instruction(t_PC, the_Cache, t_type);
+			  instruction_flag = check_for_instruction(t_PC, other_cache_access, the_Cache, t_type);
 			  if(instruction_flag!=0)
 			  {
 				  printf("L1_Instruction missed! Accessing L2...\n"); //this happens within check_for_data, but this is just simulating it for debugging
@@ -548,7 +551,7 @@ int main(int argc, char **argv)
 		  }
 		  cache_counter = data_flag + instruction_flag;
 		  printf("cache_counter is now &d\n", cache_counter);
-		  if(cache_counter!=0)
+		  if(cache_counter!=0) 
 		  {
 			  cycle_number+=cache_counter; //fakes the wait on a miss
 			  cache_flag = 1;
