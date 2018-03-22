@@ -186,6 +186,8 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 	// Get block address
 	block_address = (address / cp->blocksize);
 	
+	*access_other = 0;
+	
 	// Calculate the appropriate parameters for the L1 cache, given which_L1
 	if(which_L1 == D)
 	{
@@ -358,6 +360,7 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 		}
 		else // Now we have to find an empty spot/the LRU for the OTHER l1 cache, and enter the new data there.
 		{
+			*access_other = 1;
 			// We can change the pointer and others.
 			if(l2_evict_type == D)
 			{
