@@ -243,9 +243,44 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 	if(cp->L2_nsets == 0) // l2 Cache dne
 	{
 		fprintf(stderr, "No L2 Cache\n");
-		fprintf(stderr, "This part is incomplete! For now just returning latency.\n");
-		return latency;
-	}
+		// Now we must determine if we need to evict from L1
+		fprintf(stderr, "Looking for empty spot in L1\n");
+		for (way=0 ; way< L1_assoc ; way++) {		/* look for an invalid entry to fill */
+			if (l1ptr[L1_index][way].valid == 0) // Found empty spot, enter value
+			{
+				fprintf(stderr, "Empty L1 Cache spot found, inserting\n");
+		    	l1ptr[L1_index][way].valid = 1 ;
+		    	l1ptr[L1_index][way].tag = L1_tag ;
+				updateLRU(cp, L1_index, way, which_L1); 
+				
+				// Set dirty bit appropriately
+				if(access_type == 1)
+				{
+					l1ptr[L1_index][way].dirty = 1 ;
+				}
+				else
+				{
+			  		l1ptr[L1_index][way].dirty = 0;
+				}
+				l1_evict = 0;
+				return latency;
+		  	}
+	  	}
+		if(l1_evict == 1) // need to evict
+		{
+			fprintf(stderr, "Evicting L1 Cache spot\n");
+			way = findLRU(l1ptr, L1_index, L1_assoc); /*Find the LRU L1 Block*/ 
+			if (l1ptr[L1_index][way].dirty == 1)  
+			{
+				latency += cp->mem_lat;	/* for writing back the evicted block */
+			}
+			latency += cp->mem_lat;		/* for reading the block from memory*/
+			
+			l1ptr[L1_index][way].tag = L1_tag; // Update new tag
+			updateLRU(cp, L1_index, way, which_L1); 
+		}
+  	  	return latency ;
+ 	}
 
 	fprintf(stderr, "L1 Cache miss, checking L2\n");
   	latency += cp->L2_lat;	/* account for reading the block from L2*/
