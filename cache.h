@@ -63,6 +63,9 @@ struct cache_t * cache_create(	int I_size, int I_assoc,
   D_nblocks = D_size *1024 / blocksize ;// number of blocks in the cache
   D_nsets = D_nblocks / D_assoc ;			// number of sets (entries) in the cache
   
+  L2_nblocks = L2_size *1024 / blocksize ;// number of blocks in the cache
+  L2_nsets = L2_nblocks / L2_assoc ;			// number of sets (entries) in the cache
+  
   C->blocksize = blocksize ;
   
   C->I_nsets = I_nsets;
@@ -70,6 +73,9 @@ struct cache_t * cache_create(	int I_size, int I_assoc,
   
   C->D_nsets = D_nsets;
   C->D_assoc = D_assoc;
+  
+  C->L2_nsets = L2_nsets;
+  C->L2_assoc = L2_assoc;
   
   C->L1_lat = L1_lat;
   C->L2_lat = L2_lat;
@@ -184,13 +190,14 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 	cache_blk_t **l1ptr;
 	
 	// Get block address
-	block_address = (address / cp->blocksize);
+	block_address = (address % cp->blocksize);
 	
 	*access_other = 0;
 	
 	// Calculate the appropriate parameters for the L1 cache, given which_L1
 	if(which_L1 == D)
 	{
+		fprintf(stderr, "Accessing Data Cache\n");
 		l1ptr = cp->D_blocks;
 		L1_tag = block_address / cp->D_nsets;
 		L1_index = block_address - (L1_tag * cp->D_nsets) ;
@@ -198,6 +205,7 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 	}
 	else if(which_L1 == I)
 	{
+		fprintf(stderr, "Accessing Instruction Cache\n");
 		l1ptr = cp->I_blocks;
 		L1_tag = block_address / cp->I_nsets;
 		L1_index = block_address - (L1_tag * cp->I_nsets) ;
@@ -216,33 +224,48 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 	latency = cp->L1_lat; // Probably 0
 	
 	/* look for the requested block in L1*/
+	fprintf(stderr, "Checking Cache");
 	for (i = 0; i < L1_assoc; i++) {	
 		if (l1ptr[L1_index][i].tag == L1_tag && l1ptr[L1_index][i].valid == 1) {
 	  		updateLRU(cp, L1_index, way, which_L1) ;
 	  		if (access_type == 1) l1ptr[L1_index][i].dirty = 1 ;
 	  		{
 				// Cache Hit
+				fprintf(stderr, "L1 Cache hit!\n");
 	  			return(latency);
 			}
 		}
 	}
 	
 	/************* L1 cache miss. **************/
+	
+	// Check to see if we have L2 cache
+	if(cp->L2_nsets == 0) // l2 Cache dne
+	{
+		fprintf(stderr, "No L2 Cache\n");
+		fprintf(stderr, "This part is incomplete! For now just returning latency.\n");
+		return latency;
+	}
+
+	fprintf(stderr, "L1 Cache miss, checking L2\n");
   	latency += cp->L2_lat;	/* account for reading the block from L2*/
 	
 	/*READING FROM L2*/
 	for (i = 0; i < L2_assoc; i++) {	/* look for the requested block in L2 */
 		if (cp->L2_blocks[L2_index][i].tag == L2_tag && cp->L2_blocks[L2_index][i].valid == 1)
 		{
+			fprintf(stderr, "L2 Cache hit!\n");
 	  		updateLRU(cp, L2_index, way, 2) ;
 	  	 	if (access_type == 1)
 			{
 				cp->L2_blocks[L2_index][i].dirty = 1 ;
 			}
 			// Now we must determine if we need to evict from L1
+			fprintf(stderr, "Looking for empty spot in L1\n");
 			for (way=0 ; way< L1_assoc ; way++) {		/* look for an invalid entry to fill */
 				if (l1ptr[L1_index][way].valid == 0) // Found empty spot, enter value
 				{
+					fprintf(stderr, "Empty L1 Cache spot found, inserting\n");
 			    	l1ptr[L1_index][way].valid = 1 ;
 			    	l1ptr[L1_index][way].tag = L1_tag ;
 					updateLRU(cp, L1_index, way, which_L1); 
@@ -262,6 +285,7 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 		  	}
 			if(l1_evict == 1) // need to evict
 			{
+				fprintf(stderr, "Evicting L1 Cache spot\n");
 				way = findLRU(l1ptr, L1_index, L1_assoc); /*Find the LRU L1 Block*/ 
 				if (l1ptr[L1_index][way].dirty == 1)  
 				{
@@ -278,11 +302,13 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 	
 	
 	/************* L2 cache miss. **************/
+	fprintf(stderr, "L2 Chache miss\n");
 	latency += cp->mem_lat; // Apply memory latency
 	
 	for (way=0 ; way< L2_assoc ; way++) {		/* look for an invalid entry to fill in L2*/
 		if (cp->L2_blocks[L2_index][way].valid == 0) // Found empty spot, enter value
 		{
+			fprintf(stderr, "Entering into empty L2 spot\n");
 	    	cp->L2_blocks[L2_index][way].valid = 1 ;
 	    	cp->L2_blocks[L2_index][way].tag = L2_tag ;
 			cp->L2_blocks[L2_index][way].dirty = 0 ;
@@ -293,6 +319,7 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 			for (way2 = 0; way2 < L1_assoc; way2++) {
 				if (l1ptr[L1_index][way].valid == 0) // Found empty spot, enter value
 				{
+					fprintf(stderr, "Entering into empty L1 spot\n");
 			    	l1ptr[L1_index][way].valid = 1 ;
 			    	l1ptr[L1_index][way].tag = L1_tag ;
 					l1ptr[L1_index][way].dirty = 0 ;
@@ -305,6 +332,7 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 	if(l2_evict == 1) // need to evict
 	{
 		// Evict L2 first
+		fprintf(stderr, "Evicting spot in L2\n");
 		way = findLRU(cp->L2_blocks, L2_index, L2_assoc); /*Find the LRU L2 Block*/ 
 		if (cp->L2_blocks[L2_index][way].dirty == 1)  
 		{
@@ -329,6 +357,7 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 		// Now we find the same entry in the L1 cache with the same irod as the one we evicted from L2.
 		if(l2_evict_type == I) // evict from I
 		{
+			fprintf(stderr, "Evicting spot in I cache\n");
 			evict_tag = evict_addr / cp->I_nsets; // overwrite evict_tag
 			evict_index = evict_addr - (evict_tag * cp->I_nsets) ;
 			for (i = 0; i < cp->I_assoc; i++) {	
@@ -341,6 +370,7 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 		}
 		else if(l2_evict_type == D) // evict from D
 		{
+			fprintf(stderr, "Evicting spot in D Cache\n");
 			evict_tag = evict_addr / cp->D_nsets; // overwrite evict_tag
 			evict_index = evict_addr - (evict_tag * cp->D_nsets) ;
 			for (i = 0; i < cp->D_assoc; i++) {	
@@ -353,6 +383,7 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 		}
 		if(l2_evict_type == which_L1) // we only have to evict from one L1 cache, so now we can just enter the new value.
 		{
+			fprintf(stderr, "Entry evicted was from same cache as entry; entering data\n");
 			l1ptr[evict_index][i].tag = L1_tag; // Update new tag
 			l1ptr[evict_index][i].valid = 1;
 			cp->L2_blocks[L2_index][i].dirty = 0; // Clean as snow 
@@ -360,6 +391,7 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 		}
 		else // Now we have to find an empty spot/the LRU for the OTHER l1 cache, and enter the new data there.
 		{
+			fprintf(stderr, "Entry evicted was from differnt cache as entry; evicting spot in other cache and entering data\n");
 			*access_other = 1;
 			// We can change the pointer and others.
 			if(l2_evict_type == D)
