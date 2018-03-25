@@ -463,6 +463,7 @@ int main(int argc, char **argv)
       instruction_flag = 0;
       cache_counter = 0;
 
+
 		  /*Check for all types of hazards*/
 
 		  /*Check for the structural hazard*/
@@ -518,7 +519,6 @@ int main(int argc, char **argv)
 				}
 		  }
 		  /****************************************************************************************************************************************/
-		  
 		  /*Check if needed data is in the cache*/
 		  if(ex_mem1.type==ti_LOAD||ex_mem1.type==ti_STORE)
 		  {
@@ -541,6 +541,7 @@ int main(int argc, char **argv)
 		  }
 		  /*Check for IF stage stall*/
 		  //if(t_type!=ti_NOP)
+      //printf("%d, %d\n", t_PC, t_type);
 		  {
 			  instruction_flag = check_for_instruction(t_PC, &other_cache_access, the_Cache, t_type);
 			  if(instruction_flag!=0)
@@ -699,6 +700,7 @@ int main(int argc, char **argv)
 			  print_stage(&exit_item, cycle_number);*/
 			  printf("EXITING: ");
 			  print_stage(&real_exit, cycle_number);
+        //fflush(stdout);
 			  //printf("==================================================\n\n");
 			}
 		}

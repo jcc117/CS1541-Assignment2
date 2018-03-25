@@ -101,26 +101,6 @@ struct cache_t * cache_create(	int I_size, int I_assoc,
   		C->L2_blocks[i] = (struct cache_blk_t *)calloc(L2_assoc, sizeof(struct cache_blk_t));
   	}
 
-  	int j;
-  	//Initialize all blocks to blank blocks
-  	/*
-  	for(i = 0; i < I_nsets; i++)
-  	{
-  		for(j = 0; j < I_assoc; j++)
-  		{
-  			C->I_blocks[i][j].LRU = 0;
-  			C->D_blocks[i][j].LRU = 0;
-  		}
-  	}
-  	for(i = 0; i < L2_nsets; i++)
-  	{
-  		for(j = 0; j < L2_assoc; j++)
-  		{
-  			C->L2_blocks[i][j].LRU = 0;
-  			C->L2_blocks[i][j].LRU = 0;
-  		}
-  	}*/
-
   return C;
 }
 
@@ -326,11 +306,14 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 	for (i = 0; i < L2_assoc; i++) {	/* look for the requested block in L2 */
 		if (cp->L2_blocks[L2_index][i].tag == L2_tag && cp->L2_blocks[L2_index][i].valid == 1)
 		{
-	  		updateLRU(cp, L2_index, way, 2) ;
+       //printf("Way is %d\n", i);
+	  		updateLRU(cp, L2_index, i, 2) ;
+        //printf("its in the update\n");
 	  	 	if (access_type == 1)
 			{
 				cp->L2_blocks[L2_index][i].dirty = 1 ;
 			}
+        //printf("come down here\n");
 			// Now we must determine if we need to evict from L1
 			for (way=0 ; way< L1_assoc ; way++) {		/* look for an invalid entry to fill */
 				if (l1ptr[L1_index][way].valid == 0) // Found empty spot, enter value
@@ -354,6 +337,7 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 		  	}
 			if(l1_evict == 1) // need to evict
 			{
+        //printf("here\n");
 				way = findLRU(l1ptr, L1_index, L1_assoc); /*Find the LRU L1 Block*/ 
 				if (l1ptr[L1_index][way].dirty == 1)  //Write back the block to L1 if necessary
 				{
@@ -394,7 +378,7 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 	 	}
 	 }
 	
-	
+	 //printf("L2 miss\n");
 	/************* L2 cache miss. **************/
 	latency += cp->mem_lat; // Apply memory latency
 	
