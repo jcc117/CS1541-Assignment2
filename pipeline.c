@@ -432,7 +432,7 @@ int main(int argc, char **argv)
 	   
 		if (!size && is_empty(if1_if2.type, if2_id.type, id_ex.type, ex_mem1.type, mem1_mem2.type, mem2_wb.type, exit_item.type, tr_entry->type)) {       /* no more instructions (trace_items) to simulate */
 		  //printf("+ Simulation terminates at cycle : %u\n", cycle_number);
-		  printf("%d instruction that exited the pipeline in this cycle\n", cycle_number); 			//<----- fixed based off notes section
+		  printf("%u instruction that exited the pipeline in this cycle\n", cycle_number); 			//<----- fixed based off notes section
 		  /***************************************************************************************************************************************/
 		  
 		  //Caclulate the miss rates
