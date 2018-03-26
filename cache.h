@@ -427,6 +427,24 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 			if (l1ptr[L1_index][way].dirty == 1)  
 			{
 				latency += cp->L2_lat;	/* for writing back the evicted block */
+
+        //Set dirty bit in the L2 cache
+          int L1_nsets;
+          if(which_L1 == I) //Set L1 nsets correctly
+            L1_nsets = cp->I_nsets;
+          else
+            L1_nsets = cp->D_nsets;
+
+          int b_addr = L1_index + (l1ptr[L1_index][way].tag * L1_nsets);  //Calculate block address
+          int other_L2_tag = b_addr / cp->L2_nsets; //Get L2 tag
+          int other_L2_index = b_addr - (other_L2_tag * cp->L2_nsets) ; //Get l2 index
+
+          int k;
+          for(k = 0; k < L2_assoc; k++) //Set the dirty bit to 1, it must be in the L2 cache
+          {
+            if(cp->L2_blocks[other_L2_index][k].tag == other_L2_tag)
+              cp->L2_blocks[other_L2_index][k].dirty = 1;
+          } 
 			}
 			//latency += cp->L2_lat;		/* for reading the block from memory*/
 			

@@ -424,7 +424,8 @@ int main(int argc, char **argv)
 		d_stall = 0;
 		s_stall = 0;
 		flush_p = 0;
-		fleg = 0;
+    if(counter == 0)
+		  fleg = 0;
 
 		if(!size && counter == 0) //While the pipeline still isn't empty, send it noops
 		  buffer = &noop;
@@ -632,7 +633,7 @@ int main(int argc, char **argv)
   				id_ex = if2_id;
   				if2_id = if1_if2;
   				if1_if2 = *tr_entry;
-  				tr_entry = &inst_buffer[counter];
+  				tr_entry = &inst_buffer[0];
 
           if(counter > 0)
           {
@@ -640,7 +641,7 @@ int main(int argc, char **argv)
             int i;
             for(i = 0; i < counter; i++)
             {
-              inst_buffer[i] = buffer[i + 1];
+              inst_buffer[i] = inst_buffer[i + 1];
             }
           }
           //tr_entry->PC = saved_pc + 4;
@@ -674,7 +675,7 @@ int main(int argc, char **argv)
               int i;
               for(i = 0; i < counter; i++)
               {
-                inst_buffer[i] = buffer[i + 1];
+                inst_buffer[i] = inst_buffer[i + 1];
               }
             }
   				  if(counter == 0)
