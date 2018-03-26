@@ -58,10 +58,16 @@ struct cache_t * cache_create(	int I_size, int I_assoc,
   struct cache_t *C = (struct cache_t *)calloc(1, sizeof(struct cache_t));
 
   I_nblocks = I_size *1024 / blocksize ;// number of blocks in the cache
-  I_nsets = I_nblocks / I_assoc ;			// number of sets (entries) in the cache
+  if(I_assoc != 0)
+    I_nsets = I_nblocks / I_assoc ;			// number of sets (entries) in the cache
+  else
+    I_nsets = 0;
   
   D_nblocks = D_size *1024 / blocksize ;// number of blocks in the cache
-  D_nsets = D_nblocks / D_assoc ;			// number of sets (entries) in the cache
+  if(D_assoc != 0)
+    D_nsets = D_nblocks / D_assoc ;			// number of sets (entries) in the cache
+  else
+    D_nsets = 0;
   
   C->blocksize = blocksize ;
   
@@ -213,6 +219,8 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 	if(which_L1 == D)
 	{
 		l1ptr = cp->D_blocks;
+    if(cp->D_nsets == 0)  //Check if we are using perfect caches
+      return 0;
 		L1_tag = block_address / cp->D_nsets;
 		L1_index = block_address - (L1_tag * cp->D_nsets) ;
 		L1_assoc = cp->D_assoc;
@@ -220,6 +228,8 @@ int cache_access(struct cache_t *cp, char *access_other, unsigned long address, 
 	else if(which_L1 == I)
 	{
 		l1ptr = cp->I_blocks;
+    if(cp->I_nsets == 0)  //Check if we are using perfect caches
+      return 0;
 		L1_tag = block_address / cp->I_nsets;
 		L1_index = block_address - (L1_tag * cp->I_nsets) ;
 		L1_assoc = cp->I_assoc;
